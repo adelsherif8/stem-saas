@@ -194,6 +194,9 @@
         <h3>Drop a song here, or click to browse</h3>
         <p>MP3, WAV, FLAC, M4A or OGG</p>
       </div>
+      <div style="text-align:center;margin-top:16px">
+        <button class="btn btn-ghost btn-sm" id="sampleBtn" onclick="trySample()"><i class="fa-solid fa-wand-magic-sparkles"></i> Try a sample track</button>
+      </div>
     </div>
 
     <div class="section-title"><i class="fa-solid fa-list-check"></i> Your separations</div>
@@ -417,6 +420,22 @@
       toast('Queued — separating stems…', 'ok');
     } catch (err) {
       toast(err.message, 'error');
+    }
+  }
+
+  async function trySample() {
+    const btn = $('sampleBtn');
+    btn.disabled = true;
+    try {
+      toast('Loading sample track…');
+      const res = await fetch('/static/sample.wav');
+      if (!res.ok) throw new Error('Sample unavailable');
+      const blob = await res.blob();
+      await uploadFile(new File([blob], 'sample-track.wav', { type: 'audio/wav' }));
+    } catch (err) {
+      toast(err.message, 'error');
+    } finally {
+      btn.disabled = false;
     }
   }
 
