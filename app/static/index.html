@@ -196,6 +196,7 @@
       </div>
       <div style="text-align:center;margin-top:16px">
         <button class="btn btn-ghost btn-sm" id="sampleBtn" onclick="trySample()"><i class="fa-solid fa-wand-magic-sparkles"></i> Try a sample track</button>
+        <div style="font-size:11px;color:var(--muted);margin-top:9px">Sample: <a href="https://ccmixter.org/files/kizzylotus/47456" target="_blank" style="color:var(--muted)">"Homesick" by kizzylotus</a> · <a href="http://creativecommons.org/licenses/by/3.0/" target="_blank" style="color:var(--muted)">CC BY 3.0</a></div>
       </div>
     </div>
 
@@ -428,10 +429,10 @@
     btn.disabled = true;
     try {
       toast('Loading sample track…');
-      const res = await fetch('/static/sample.wav');
+      const res = await fetch('/static/sample.mp3');
       if (!res.ok) throw new Error('Sample unavailable');
       const blob = await res.blob();
-      await uploadFile(new File([blob], 'sample-track.wav', { type: 'audio/wav' }));
+      await uploadFile(new File([blob], 'sample-track.mp3', { type: 'audio/mpeg' }));
     } catch (err) {
       toast(err.message, 'error');
     } finally {

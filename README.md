@@ -141,7 +141,7 @@ All via environment variables (see `.env.example`). Key flags:
 | `DATABASE_URL`            | `sqlite:///./stemsaas.db`| Postgres in Docker                              |
 | `REDIS_URL`               | `redis://localhost:6379/0`| Celery broker + result backend                 |
 | `CELERY_EAGER`            | `false`                  | `true` = run jobs in-process, no broker         |
-| `DEMUCS_REAL`             | `false`                  | `true` = real HT-Demucs (`pip install demucs`)  |
+| `DEMUCS_REAL`             | `false`                  | `true` = real HT-Demucs (see "Running real stem separation") |
 | `FREE_TIER_MONTHLY_LIMIT` | `3`                      | Songs/month on the free tier                    |
 | `JWT_SECRET`              | `dev-secret-change-me`   | **Change in production**                         |
 
@@ -154,6 +154,29 @@ All via environment variables (see `.env.example`). Key flags:
   boto3 `put_object` / presigned URLs to move to S3; nothing else changes.
 - **Billing** — mock Stripe endpoints with the real shape (checkout session +
   webhook + `client_reference_id`). Drop in the `stripe` SDK to go live.
+
+### Running real stem separation (Demucs)
+
+Mock mode runs anywhere (the hosted demo uses it — real Demucs needs ~2 GB +
+several GB of RAM, more than a free cloud box). To actually separate audio,
+run it **locally**:
+
+```bash
+# install the ML extras on top of the base deps (~2 GB; needs ffmpeg installed)
+pip install -r requirements.txt -r requirements-ml.txt
+
+# run a job synchronously with real HT-Demucs (no broker needed)
+CELERY_EAGER=true DEMUCS_REAL=true uvicorn app.main:app
+```
+
+Upload a song (or hit **Try a sample track**) and the worker runs the real
+`htdemucs` model — a 30s clip separates in ~15 s on CPU. The first run downloads
+the model (~80 MB). Only `app/tasks.py::_real_separate` differs from mock; the
+queue, DB, API, and UI are identical. To run real Demucs in the cloud, deploy
+the `worker` service on an instance with enough RAM.
+
+The bundled sample track is *"Homesick"* by **kizzylotus** (ccMixter,
+[CC BY 3.0](http://creativecommons.org/licenses/by/3.0/)).
 
 ---
 
