@@ -1,9 +1,10 @@
+import os
 import time
 import uuid
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import RedirectResponse
+from fastapi.responses import FileResponse
 from sqlalchemy import text
 
 from .config import settings
@@ -46,9 +47,12 @@ async def request_logging(request: Request, call_next):
     return response
 
 
+STATIC_DIR = os.path.join(os.path.dirname(__file__), "static")
+
+
 @app.get("/", include_in_schema=False)
 def root():
-    return RedirectResponse(url="/docs")
+    return FileResponse(os.path.join(STATIC_DIR, "index.html"))
 
 
 @app.get("/health", tags=["meta"])

@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Stem SaaS — AI Audio Stem Separation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+<style>
+  :root {
+    --bg: #0a0e1a;
+    --bg-soft: #0f1422;
+    --card: #141a2b;
+    --card-hi: #1b2236;
+    --border: #232c44;
+    --text: #e8ecf5;
+    --muted: #8b97b3;
+    --accent: #6366f1;
+    --accent2: #a855f7;
+    --pink: #ec4899;
+    --green: #22c55e;
+    --red: #ef4444;
+    --grad: linear-gradient(120deg, #6366f1, #a855f7 55%, #ec4899);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    background: radial-gradient(1200px 600px at 80% -10%, rgba(168,85,247,.15), transparent 60%),
+                radial-gradient(1000px 500px at -10% 10%, rgba(99,102,241,.15), transparent 55%),
+                var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    line-height: 1.5;
+  }
+  a { color: inherit; }
+  .wrap { max-width: 920px; margin: 0 auto; padding: 28px 20px 80px; }
+
+  /* top bar */
+  .topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 36px; }
+  .brand { display: flex; align-items: center; gap: 12px; font-weight: 800; font-size: 20px; letter-spacing: -.02em; }
+  .brand .logo {
+    width: 40px; height: 40px; border-radius: 11px; display: grid; place-items: center;
+    background: var(--grad); color: #fff; font-size: 18px;
+    box-shadow: 0 8px 24px rgba(124,58,237,.4);
+  }
+  .brand small { display: block; font-size: 11px; font-weight: 500; color: var(--muted); letter-spacing: .02em; }
+  .userbox { display: flex; align-items: center; gap: 14px; }
+  .userbox .email { font-size: 13px; color: var(--muted); }
+
+  .badge { font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 999px; display: inline-flex; gap: 6px; align-items: center; text-transform: uppercase; letter-spacing: .04em; }
+  .badge.free { background: #232c44; color: var(--muted); }
+  .badge.pro { background: linear-gradient(120deg,#f59e0b,#ec4899); color: #1a1205; }
+
+  .btn { font-family: inherit; font-weight: 600; font-size: 14px; border: none; cursor: pointer; border-radius: 10px; padding: 11px 18px; display: inline-flex; align-items: center; gap: 8px; transition: .15s; color: #fff; }
+  .btn-primary { background: var(--grad); box-shadow: 0 6px 18px rgba(124,58,237,.35); }
+  .btn-primary:hover { filter: brightness(1.08); transform: translateY(-1px); }
+  .btn-ghost { background: var(--card-hi); color: var(--text); border: 1px solid var(--border); }
+  .btn-ghost:hover { background: #222a42; }
+  .btn-sm { padding: 7px 12px; font-size: 13px; border-radius: 8px; }
+  .btn:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+
+  /* hero */
+  .hero { text-align: center; margin-bottom: 30px; }
+  .hero h1 { font-size: 38px; font-weight: 800; letter-spacing: -.03em; line-height: 1.1; }
+  .hero h1 .g { background: var(--grad); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+  .hero p { color: var(--muted); margin-top: 12px; font-size: 16px; }
+
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 18px; padding: 26px; }
+  .card + .card { margin-top: 20px; }
+
+  /* auth */
+  .auth { max-width: 420px; margin: 10px auto 0; }
+  .tabs { display: flex; gap: 6px; background: var(--bg-soft); padding: 5px; border-radius: 12px; margin-bottom: 20px; }
+  .tabs button { flex: 1; background: transparent; color: var(--muted); border: none; padding: 10px; border-radius: 9px; font-weight: 600; font-family: inherit; font-size: 14px; cursor: pointer; }
+  .tabs button.active { background: var(--card-hi); color: var(--text); }
+  label.field { display: block; margin-bottom: 14px; }
+  label.field span { display: block; font-size: 12px; color: var(--muted); margin-bottom: 6px; font-weight: 500; }
+  input[type=email], input[type=password], input[type=text] {
+    width: 100%; background: var(--bg-soft); border: 1px solid var(--border); color: var(--text);
+    padding: 12px 14px; border-radius: 10px; font-family: inherit; font-size: 14px; outline: none; transition: .15s;
+  }
+  input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(99,102,241,.18); }
+  .full { width: 100%; justify-content: center; margin-top: 4px; }
+
+  /* quota strip */
+  .quota { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+  .quota .bar { flex: 1; min-width: 160px; height: 8px; background: var(--bg-soft); border-radius: 999px; overflow: hidden; }
+  .quota .bar > i { display: block; height: 100%; background: var(--grad); border-radius: 999px; transition: width .4s; }
+  .quota .label { font-size: 13px; color: var(--muted); }
+  .quota .label b { color: var(--text); }
+
+  /* dropzone */
+  .drop { border: 2px dashed var(--border); border-radius: 16px; padding: 40px 20px; text-align: center; cursor: pointer; transition: .18s; background: var(--bg-soft); }
+  .drop:hover, .drop.over { border-color: var(--accent2); background: rgba(168,85,247,.06); }
+  .drop .ic { font-size: 34px; background: var(--grad); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+  .drop h3 { margin: 14px 0 4px; font-size: 16px; }
+  .drop p { color: var(--muted); font-size: 13px; }
+
+  .section-title { display: flex; align-items: center; gap: 9px; font-size: 14px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin: 32px 4px 14px; }
+
+  /* job card */
+  .job { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 18px; margin-bottom: 14px; }
+  .job-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .job-name { display: flex; align-items: center; gap: 11px; font-weight: 600; overflow: hidden; }
+  .job-name .fic { width: 36px; height: 36px; border-radius: 9px; background: var(--card-hi); display: grid; place-items: center; color: var(--accent2); flex: none; }
+  .job-name .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .status { font-size: 12px; font-weight: 700; padding: 5px 11px; border-radius: 999px; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+  .status.queued { background: #232c44; color: var(--muted); }
+  .status.processing { background: rgba(99,102,241,.16); color: #a5b4fc; }
+  .status.completed { background: rgba(34,197,94,.15); color: #86efac; }
+  .status.failed { background: rgba(239,68,68,.15); color: #fca5a5; }
+  .progress { height: 7px; background: var(--bg-soft); border-radius: 999px; overflow: hidden; margin-top: 14px; }
+  .progress > i { display: block; height: 100%; width: 0; background: var(--grad); border-radius: 999px; transition: width .5s; }
+  .stems { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px,1fr)); gap: 10px; margin-top: 16px; }
+  .stem { display: flex; align-items: center; justify-content: space-between; gap: 8px; background: var(--bg-soft); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; }
+  .stem .sl { display: flex; align-items: center; gap: 9px; font-size: 13px; font-weight: 500; text-transform: capitalize; }
+  .stem .sl i { color: var(--accent2); width: 16px; text-align: center; }
+  .stem button { background: var(--card-hi); border: 1px solid var(--border); color: var(--text); width: 30px; height: 30px; border-radius: 8px; cursor: pointer; transition: .15s; }
+  .stem button:hover { background: var(--accent); border-color: var(--accent); }
+
+  .empty { text-align: center; color: var(--muted); padding: 30px; font-size: 14px; }
+  .empty i { font-size: 26px; display: block; margin-bottom: 10px; opacity: .5; }
+
+  .foot { text-align: center; margin-top: 40px; color: var(--muted); font-size: 12px; }
+  .foot a { color: var(--accent2); text-decoration: none; }
+  .foot a:hover { text-decoration: underline; }
+
+  /* toast */
+  #toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px); background: var(--card-hi); border: 1px solid var(--border); padding: 13px 18px; border-radius: 12px; font-size: 14px; font-weight: 500; opacity: 0; pointer-events: none; transition: .25s; display: flex; gap: 10px; align-items: center; box-shadow: 0 12px 40px rgba(0,0,0,.5); z-index: 50; }
+  #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  #toast.err i { color: var(--red); }
+  #toast.ok i { color: var(--green); }
+  .hidden { display: none !important; }
+  .spin { animation: spin 1s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="topbar">
+    <div class="brand">
+      <div class="logo"><i class="fa-solid fa-wave-square"></i></div>
+      <div>Stem SaaS<small>AI audio stem separation</small></div>
+    </div>
+    <div class="userbox hidden" id="userbox">
+      <span class="badge" id="tierBadge"></span>
+      <span class="email" id="userEmail"></span>
+      <button class="btn btn-ghost btn-sm" onclick="logout()"><i class="fa-solid fa-right-from-bracket"></i></button>
+    </div>
+  </div>
+
+  <!-- LOGGED OUT -->
+  <div id="view-auth">
+    <div class="hero">
+      <h1>Split any song into <span class="g">stems</span>.</h1>
+      <p>Upload a track and let the AI pipeline separate vocals, drums, bass &amp; more.</p>
+    </div>
+    <div class="card auth">
+      <div class="tabs">
+        <button id="tab-login" class="active" onclick="setMode('login')">Log in</button>
+        <button id="tab-register" onclick="setMode('register')">Sign up</button>
+      </div>
+      <form id="authForm" onsubmit="return submitAuth(event)">
+        <label class="field"><span>Email</span>
+          <input type="email" id="email" required placeholder="you@example.com" autocomplete="username" />
+        </label>
+        <label class="field"><span>Password</span>
+          <input type="password" id="password" required minlength="6" placeholder="••••••••" autocomplete="current-password" />
+        </label>
+        <button class="btn btn-primary full" id="authBtn" type="submit">
+          <i class="fa-solid fa-arrow-right-to-bracket"></i> <span id="authBtnText">Log in</span>
+        </button>
+      </form>
+    </div>
+    <p class="foot">Free tier: 3 songs / month · <a href="/docs" target="_blank">API docs</a> · <a href="https://github.com/adelsherif8/stem-saas" target="_blank">Source</a></p>
+  </div>
+
+  <!-- LOGGED IN -->
+  <div id="view-app" class="hidden">
+    <div class="card">
+      <div class="quota">
+        <div class="label" id="quotaLabel">Loading usage…</div>
+        <div class="bar"><i id="quotaBar" style="width:0"></i></div>
+        <button class="btn btn-primary btn-sm" id="upgradeBtn" onclick="upgrade()"><i class="fa-solid fa-crown"></i> Upgrade to Pro</button>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:20px">
+      <div class="drop" id="drop">
+        <input type="file" id="fileInput" class="hidden" accept=".mp3,.wav,.flac,.m4a,.ogg" />
+        <div class="ic"><i class="fa-solid fa-cloud-arrow-up"></i></div>
+        <h3>Drop a song here, or click to browse</h3>
+        <p>MP3, WAV, FLAC, M4A or OGG</p>
+      </div>
+    </div>
+
+    <div class="section-title"><i class="fa-solid fa-list-check"></i> Your separations</div>
+    <div id="jobs"></div>
+    <div class="empty" id="jobsEmpty"><i class="fa-solid fa-compact-disc"></i>No separations yet. Upload a track to get started.</div>
+
+    <p class="foot"><a href="/docs" target="_blank">API docs</a> · <a href="https://github.com/adelsherif8/stem-saas" target="_blank">Source on GitHub</a></p>
+  </div>
+
+</div>
+
+<div id="toast"><i class="fa-solid fa-circle-info"></i><span id="toastMsg"></span></div>
+
+<script>
+  const TOKEN_KEY = 'ssaas_token';
+  const JOBS_KEY = 'ssaas_jobs';
+  let token = localStorage.getItem(TOKEN_KEY) || '';
+  let mode = 'login';
+  const polling = {};
+
+  const STEM_ICONS = { vocals:'fa-microphone', drums:'fa-drum', bass:'fa-guitar', other:'fa-compact-disc' };
+
+  const $ = (id) => document.getElementById(id);
+
+  function toast(msg, kind='info') {
+    const t = $('toast');
+    t.className = 'show ' + (kind === 'error' ? 'err' : kind === 'ok' ? 'ok' : '');
+    t.querySelector('i').className = kind === 'error' ? 'fa-solid fa-circle-exclamation'
+      : kind === 'ok' ? 'fa-solid fa-circle-check' : 'fa-solid fa-circle-info';
+    $('toastMsg').textContent = msg;
+    clearTimeout(toast._t);
+    toast._t = setTimeout(() => t.classList.remove('show'), 3200);
+  }
+
+  async function api(path, opts = {}) {
+    opts.headers = opts.headers || {};
+    if (token) opts.headers['Authorization'] = 'Bearer ' + token;
+    const res = await fetch(path, opts);
+    if (res.status === 401) { logout(); throw new Error('Session expired — please log in again.'); }
+    let data = null;
+    try { data = await res.json(); } catch (_) {}
+    if (!res.ok) throw new Error((data && data.detail) || ('Request failed (' + res.status + ')'));
+    return data;
+  }
+
+  // ---------- auth ----------
+  function setMode(m) {
+    mode = m;
+    $('tab-login').classList.toggle('active', m === 'login');
+    $('tab-register').classList.toggle('active', m === 'register');
+    $('authBtnText').textContent = m === 'login' ? 'Log in' : 'Create account';
+    $('password').autocomplete = m === 'login' ? 'current-password' : 'new-password';
+  }
+
+  async function submitAuth(e) {
+    e.preventDefault();
+    const email = $('email').value.trim();
+    const password = $('password').value;
+    const btn = $('authBtn');
+    btn.disabled = true;
+    try {
+      if (mode === 'register') {
+        await api('/auth/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password }),
+        });
+      }
+      const form = new URLSearchParams({ username: email, password });
+      const res = await fetch('/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: form,
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || 'Login failed');
+      token = data.access_token;
+      localStorage.setItem(TOKEN_KEY, token);
+      toast('Welcome' + (mode === 'register' ? '! Account created.' : ' back!'), 'ok');
+      await enterApp();
+    } catch (err) {
+      toast(err.message, 'error');
+    } finally {
+      btn.disabled = false;
+    }
+    return false;
+  }
+
+  function logout() {
+    token = '';
+    localStorage.removeItem(TOKEN_KEY);
+    Object.values(polling).forEach(clearTimeout);
+    $('view-app').classList.add('hidden');
+    $('view-auth').classList.remove('hidden');
+    $('userbox').classList.add('hidden');
+  }
+
+  // ---------- app ----------
+  async function enterApp() {
+    $('view-auth').classList.add('hidden');
+    $('view-app').classList.remove('hidden');
+    $('userbox').classList.remove('hidden');
+    try {
+      const me = await api('/auth/me');
+      $('userEmail').textContent = me.email;
+    } catch (_) { return; }
+    await refreshQuota();
+    renderJobs();
+    loadJobs().forEach((j) => { if (j.status !== 'completed' && j.status !== 'failed') pollJob(j.id); });
+  }
+
+  async function refreshQuota() {
+    try {
+      const q = await api('/projects/quota');
+      const badge = $('tierBadge');
+      badge.className = 'badge ' + q.tier;
+      badge.innerHTML = q.tier === 'pro'
+        ? '<i class="fa-solid fa-crown"></i> Pro'
+        : '<i class="fa-solid fa-user"></i> Free';
+      if (q.tier === 'pro') {
+        $('quotaLabel').innerHTML = '<b>Unlimited</b> separations · ' + q.used_this_month + ' this month';
+        $('quotaBar').style.width = '100%';
+        $('upgradeBtn').classList.add('hidden');
+      } else {
+        $('quotaLabel').innerHTML = '<b>' + q.used_this_month + ' / ' + q.limit + '</b> songs used this month';
+        $('quotaBar').style.width = Math.min(100, (q.used_this_month / q.limit) * 100) + '%';
+        $('upgradeBtn').classList.remove('hidden');
+      }
+    } catch (err) { toast(err.message, 'error'); }
+  }
+
+  async function upgrade() {
+    try {
+      const s = await api('/billing/checkout', { method: 'POST' });
+      // Mock Stripe: the checkout returns a session; complete it via the demo shortcut.
+      await api('/billing/mock-pay?session_id=' + encodeURIComponent(s.session_id), { method: 'POST' });
+      toast('Upgraded to Pro — unlimited separations unlocked.', 'ok');
+      await refreshQuota();
+    } catch (err) { toast(err.message, 'error'); }
+  }
+
+  // ---------- jobs (tracked client-side) ----------
+  function loadJobs() { try { return JSON.parse(localStorage.getItem(JOBS_KEY)) || []; } catch (_) { return []; } }
+  function saveJobs(list) { localStorage.setItem(JOBS_KEY, JSON.stringify(list)); }
+  function upsertJob(job) {
+    const list = loadJobs();
+    const i = list.findIndex((j) => j.id === job.id);
+    if (i >= 0) list[i] = { ...list[i], ...job }; else list.unshift(job);
+    saveJobs(list);
+    renderJobs();
+  }
+
+  function renderJobs() {
+    const list = loadJobs();
+    const box = $('jobs');
+    $('jobsEmpty').classList.toggle('hidden', list.length > 0);
+    box.innerHTML = list.map((j) => {
+      const st = j.status || 'queued';
+      const stIcon = st === 'completed' ? 'fa-circle-check'
+        : st === 'failed' ? 'fa-circle-xmark'
+        : st === 'processing' ? 'fa-circle-notch spin'
+        : 'fa-clock';
+      const stems = (j.stems || []).map((name) =>
+        '<div class="stem"><span class="sl"><i class="fa-solid ' + (STEM_ICONS[name] || 'fa-music') + '"></i>' + name + '</span>' +
+        '<button title="Download" onclick="downloadStem(' + j.id + ',\'' + name + '\')"><i class="fa-solid fa-download"></i></button></div>'
+      ).join('');
+      return '<div class="job">' +
+        '<div class="job-head">' +
+          '<div class="job-name"><span class="fic"><i class="fa-solid fa-music"></i></span><span class="nm">' + escapeHtml(j.name) + '</span></div>' +
+          '<span class="status ' + st + '"><i class="fa-solid ' + stIcon + '"></i>' + st + '</span>' +
+        '</div>' +
+        (st !== 'completed' ? '<div class="progress"><i style="width:' + (j.progress || 0) + '%"></i></div>' : '') +
+        (st === 'completed' && stems ? '<div class="stems">' + stems + '</div>' : '') +
+        (st === 'failed' ? '<p style="color:#fca5a5;font-size:13px;margin-top:10px">' + escapeHtml(j.error || 'Processing failed') + '</p>' : '') +
+      '</div>';
+    }).join('');
+  }
+
+  function escapeHtml(s) { return String(s).replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+  function pollJob(id) {
+    clearTimeout(polling[id]);
+    const tick = async () => {
+      try {
+        const j = await api('/jobs/' + id);
+        const patch = { id, status: j.status, progress: j.progress, error: j.error };
+        if (j.status === 'completed') {
+          try { patch.stems = (await api('/jobs/' + id + '/stems')).map((s) => s.name); } catch (_) {}
+        }
+        upsertJob(patch);
+        if (j.status === 'completed' || j.status === 'failed') { delete polling[id]; return; }
+      } catch (_) {}
+      polling[id] = setTimeout(tick, 1500);
+    };
+    tick();
+  }
+
+  async function downloadStem(jobId, name) {
+    try {
+      const res = await fetch('/jobs/' + jobId + '/stems/' + name, { headers: { Authorization: 'Bearer ' + token } });
+      if (!res.ok) throw new Error('Download failed');
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = name + '.wav'; document.body.appendChild(a); a.click(); a.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) { toast(err.message, 'error'); }
+  }
+
+  // ---------- upload ----------
+  async function uploadFile(file) {
+    if (!file) return;
+    const fd = new FormData();
+    fd.append('file', file);
+    toast('Uploading "' + file.name + '"…');
+    try {
+      const r = await api('/projects', { method: 'POST', body: fd });
+      upsertJob({ id: r.job.id, name: r.project.original_filename, status: r.job.status, progress: r.job.progress });
+      pollJob(r.job.id);
+      await refreshQuota();
+      toast('Queued — separating stems…', 'ok');
+    } catch (err) {
+      toast(err.message, 'error');
+    }
+  }
+
+  function wireDropzone() {
+    const drop = $('drop');
+    const input = $('fileInput');
+    drop.addEventListener('click', () => input.click());
+    input.addEventListener('change', () => { uploadFile(input.files[0]); input.value = ''; });
+    ['dragenter', 'dragover'].forEach((ev) => drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.add('over'); }));
+    ['dragleave', 'drop'].forEach((ev) => drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.remove('over'); }));
+    drop.addEventListener('drop', (e) => { if (e.dataTransfer.files[0]) uploadFile(e.dataTransfer.files[0]); });
+  }
+
+  // ---------- boot ----------
+  wireDropzone();
+  if (token) { enterApp(); } else { setMode('login'); }
+</script>
+</body>
+</html>
