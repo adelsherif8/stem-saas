@@ -9,6 +9,8 @@ It's a prototype, but it's wired the way a real service is: an API process and a
 separate **Celery worker** talking over **Redis**, **Postgres** for state, JWT
 auth, per-user quotas, structured JSON logging, health checks, tests, and Docker.
 
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/adelsherif8/stem-saas)
+
 ---
 
 ## Architecture
