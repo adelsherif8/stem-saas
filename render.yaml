@@ -1,0 +1,39 @@
+# Render Blueprint — deploys the whole stack on the free tier.
+# The Celery worker is co-located in the web service (Render bills standalone
+# background workers; the web service is free), talking to a free managed
+# Key Value (Redis) + free managed Postgres.
+databases:
+  - name: stem-saas-db
+    plan: free
+
+services:
+  - type: keyvalue
+    name: stem-saas-redis
+    plan: free
+    ipAllowList: []
+    maxmemoryPolicy: noeviction
+
+  - type: web
+    name: stem-saas
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerCommand: sh start.sh
+    plan: free
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: CELERY_EAGER
+        value: "false"
+      - key: STORAGE_DIR
+        value: /app/storage
+      - key: JWT_SECRET
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: stem-saas-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: keyvalue
+          name: stem-saas-redis
+          property: connectionString

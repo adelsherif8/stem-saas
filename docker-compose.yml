@@ -1,0 +1,50 @@
+services:
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: stem
+      POSTGRES_PASSWORD: stem
+      POSTGRES_DB: stemsaas
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  api:
+    build: .
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+    environment:
+      DATABASE_URL: postgresql+psycopg://stem:stem@db:5432/stemsaas
+      REDIS_URL: redis://redis:6379/0
+      CELERY_EAGER: "false"
+      JWT_SECRET: change-me-in-prod
+      STORAGE_DIR: /app/storage
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+      - redis
+    volumes:
+      - ./storage:/app/storage
+
+  worker:
+    build: .
+    command: celery -A app.celery_app.celery_app worker --loglevel=info
+    environment:
+      DATABASE_URL: postgresql+psycopg://stem:stem@db:5432/stemsaas
+      REDIS_URL: redis://redis:6379/0
+      STORAGE_DIR: /app/storage
+      DEMUCS_REAL: "false"
+    depends_on:
+      - db
+      - redis
+    volumes:
+      - ./storage:/app/storage
+
+volumes:
+  pgdata:
