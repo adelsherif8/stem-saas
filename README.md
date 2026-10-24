@@ -196,3 +196,7 @@ The bundled sample track is *"Homesick"* by **kizzylotus** (ccMixter,
 - Real S3 + presigned download URLs; real Stripe SDK + signature verification
 - Rate limiting, refresh tokens, and per-job retry/backoff
 - Object-storage-backed stem cleanup + lifecycle policies
+
+---
+
+Built by **Adel Atya**, AI engineer: AI voice agents, agentic systems and automation for businesses. [adelatya.com](https://adelatya.com)
