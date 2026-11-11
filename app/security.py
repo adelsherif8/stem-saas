@@ -13,7 +13,7 @@ def _encode(password: str) -> bytes:
 
 
 def hash_password(password: str) -> str:
-    return bcrypt.hashpw(_encode(password), bcrypt.gensalt()).decode("utf-8")
+    return bcrypt.hashpw(_encode(password), bcrypt.gensalt(rounds=settings.bcrypt_rounds)).decode("utf-8")
 
 
 def verify_password(password: str, hashed: str) -> bool:

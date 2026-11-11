@@ -25,6 +25,7 @@ class Settings(BaseSettings):
     jwt_secret: str = "dev-secret-change-me-to-a-long-random-value-in-prod"
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 60 * 24
+    bcrypt_rounds: int = 12  # tests lower this for speed
 
     storage_dir: str = "./storage"
 
