@@ -15,6 +15,9 @@ class Settings(BaseSettings):
     database_url: str = "sqlite:///./stemsaas.db"
     redis_url: str = "redis://localhost:6379/0"
 
+    # Run `alembic upgrade head` when the API process starts.
+    auto_migrate: bool = True
+
     # When True, Celery runs tasks synchronously in-process (no broker needed).
     # Handy for tests and a quick `uvicorn`-only demo.
     celery_eager: bool = False

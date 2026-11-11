@@ -9,16 +9,20 @@ from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 
 from .config import settings
-from .database import Base, SessionLocal, engine
+from .database import SessionLocal
 from .logging_conf import get_logger, setup_logging
 from .routers import auth, billing, jobs, projects
 
 setup_logging()
 logger = get_logger("app")
 
-# Prototype-friendly: create tables on startup. Swap for Alembic migrations
-# before anything resembling production.
-Base.metadata.create_all(bind=engine)
+# Schema is owned by Alembic (migrations/). Apply pending migrations on boot so
+# a fresh deploy (or a pre-Alembic database) comes up at head. Set
+# AUTO_MIGRATE=false to run `alembic upgrade head` as a separate release step.
+if settings.auto_migrate:
+    from .migrate import upgrade_to_head
+
+    upgrade_to_head()
 
 app = FastAPI(title=settings.app_name, version="0.1.0")
 app.add_middleware(
