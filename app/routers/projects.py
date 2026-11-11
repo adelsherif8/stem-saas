@@ -5,9 +5,9 @@ from sqlalchemy.orm import Session
 
 from ..billing import can_create, quota
 from ..database import get_db
-from ..deps import get_current_user
+from ..deps import WorkspaceContext, require
 from ..logging_conf import get_logger
-from ..models import Job, JobStatus, Project, User
+from ..models import Job, JobStatus, Project
 from ..schemas import ProjectOut, QuotaOut, UploadResponse
 from ..storage import save_upload
 from ..tasks import separate_stems
@@ -22,20 +22,22 @@ ALLOWED_EXT = {".mp3", ".wav", ".flac", ".m4a", ".ogg"}
 def upload_song(
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
-    user: User = Depends(get_current_user),
+    ctx: WorkspaceContext = Depends(require("projects:create")),
 ):
     ext = os.path.splitext(file.filename or "")[1].lower()
     if ext not in ALLOWED_EXT:
         raise HTTPException(status_code=400, detail=f"Unsupported file type: {ext}")
 
-    if not can_create(db, user):
+    workspace = ctx.workspace
+    if not can_create(db, workspace):
         raise HTTPException(
             status_code=402,
-            detail="Monthly free-tier limit reached. Upgrade to Pro.",
+            detail="Monthly free-tier limit reached for this workspace. Upgrade to Pro.",
         )
 
     project = Project(
-        owner_id=user.id,
+        workspace_id=workspace.id,
+        owner_id=ctx.acting_user_id,
         name=file.filename,
         original_filename=file.filename,
     )
@@ -46,7 +48,12 @@ def upload_song(
     project.original_path = save_upload(project.id, file.filename, file.file)
     db.commit()
 
-    job = Job(project_id=project.id, owner_id=user.id, status=JobStatus.queued)
+    job = Job(
+        workspace_id=workspace.id,
+        project_id=project.id,
+        owner_id=ctx.acting_user_id,
+        status=JobStatus.queued,
+    )
     db.add(job)
     db.commit()
     db.refresh(job)
@@ -58,18 +65,25 @@ def upload_song(
 
     logger.info(
         "song_uploaded",
-        extra={"user_id": user.id, "project_id": project.id, "job_id": job.id},
+        extra={
+            "workspace_id": workspace.id,
+            "user_id": ctx.acting_user_id,
+            "api_key_id": ctx.principal.actor_api_key_id,
+            "project_id": project.id,
+            "job_id": job.id,
+        },
     )
     return UploadResponse(project=project, job=job)
 
 
 @router.get("", response_model=list[ProjectOut])
 def list_projects(
-    db: Session = Depends(get_db), user: User = Depends(get_current_user)
+    db: Session = Depends(get_db),
+    ctx: WorkspaceContext = Depends(require("projects:read")),
 ):
     return (
         db.query(Project)
-        .filter(Project.owner_id == user.id)
+        .filter(Project.workspace_id == ctx.workspace.id)
         .order_by(Project.created_at.desc())
         .all()
     )
@@ -77,6 +91,7 @@ def list_projects(
 
 @router.get("/quota", response_model=QuotaOut)
 def get_quota(
-    db: Session = Depends(get_db), user: User = Depends(get_current_user)
+    db: Session = Depends(get_db),
+    ctx: WorkspaceContext = Depends(require("projects:read")),
 ):
-    return quota(db, user)
+    return quota(db, ctx.workspace)

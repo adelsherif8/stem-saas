@@ -1,40 +1,44 @@
+"""Quota enforcement. Quotas are per *workspace* (not per user): a team on the
+Pro plan shares one unlimited allowance, and a free workspace's 3 songs/month
+are shared by its members. A user's personal workspace keeps the old per-user
+behaviour for solo accounts."""
 from datetime import datetime, timezone
 
 from sqlalchemy.orm import Session
 
 from .config import settings
-from .models import Project, Tier, User
+from .models import Project, Tier, Workspace
 
 
-def used_this_month(db: Session, user: User) -> int:
+def used_this_month(db: Session, workspace: Workspace) -> int:
     now = datetime.now(timezone.utc)
     month_start = datetime(now.year, now.month, 1, tzinfo=timezone.utc)
     return (
         db.query(Project)
-        .filter(Project.owner_id == user.id, Project.created_at >= month_start)
+        .filter(Project.workspace_id == workspace.id, Project.created_at >= month_start)
         .count()
     )
 
 
-def quota(db: Session, user: User) -> dict:
-    used = used_this_month(db, user)
-    if user.tier == Tier.pro:
+def quota(db: Session, workspace: Workspace) -> dict:
+    used = used_this_month(db, workspace)
+    if workspace.tier == Tier.pro:
         return {
-            "tier": user.tier.value,
+            "tier": workspace.tier.value,
             "used_this_month": used,
             "limit": None,
             "remaining": None,
         }
     limit = settings.free_tier_monthly_limit
     return {
-        "tier": user.tier.value,
+        "tier": workspace.tier.value,
         "used_this_month": used,
         "limit": limit,
         "remaining": max(0, limit - used),
     }
 
 
-def can_create(db: Session, user: User) -> bool:
-    if user.tier == Tier.pro:
+def can_create(db: Session, workspace: Workspace) -> bool:
+    if workspace.tier == Tier.pro:
         return True
-    return used_this_month(db, user) < settings.free_tier_monthly_limit
+    return used_this_month(db, workspace) < settings.free_tier_monthly_limit

@@ -11,7 +11,7 @@ from sqlalchemy import text
 from .config import settings
 from .database import SessionLocal
 from .logging_conf import get_logger, setup_logging
-from .routers import auth, billing, jobs, projects
+from .routers import auth, billing, jobs, projects, workspaces
 
 setup_logging()
 logger = get_logger("app")
@@ -92,3 +92,4 @@ app.include_router(auth.router)
 app.include_router(projects.router)
 app.include_router(jobs.router)
 app.include_router(billing.router)
+app.include_router(workspaces.router)
