@@ -52,7 +52,7 @@
   .badge.free { background: #232c44; color: var(--muted); }
   .badge.pro { background: linear-gradient(120deg,#f59e0b,#ec4899); color: #1a1205; }
 
-  .btn { font-family: inherit; font-weight: 600; font-size: 14px; border: none; cursor: pointer; border-radius: 10px; padding: 11px 18px; display: inline-flex; align-items: center; gap: 8px; transition: .15s; color: #fff; }
+  .btn { font-family: inherit; font-weight: 600; font-size: 14px; border: none; cursor: pointer; border-radius: 10px; padding: 11px 18px; display: inline-flex; align-items: center; gap: 8px; transition: .15s; color: #fff; text-decoration: none; }
   .btn-primary { background: var(--grad); box-shadow: 0 6px 18px rgba(124,58,237,.35); }
   .btn-primary:hover { filter: brightness(1.08); transform: translateY(-1px); }
   .btn-ghost { background: var(--card-hi); color: var(--text); border: 1px solid var(--border); }
@@ -122,6 +122,9 @@
   .empty { text-align: center; color: var(--muted); padding: 30px; font-size: 14px; }
   .empty i { font-size: 26px; display: block; margin-bottom: 10px; opacity: .5; }
 
+  .ws-select { background: var(--card-hi); color: var(--text); border: 1px solid var(--border); border-radius: 9px; padding: 6px 10px; font-family: inherit; font-size: 13px; max-width: 220px; }
+  .oauth { margin-top: 18px; display: grid; gap: 10px; }
+  .oauth .or { text-align: center; color: var(--muted); font-size: 12px; }
   .foot { text-align: center; margin-top: 40px; color: var(--muted); font-size: 12px; }
   .foot a { color: var(--accent2); text-decoration: none; }
   .foot a:hover { text-decoration: underline; }
@@ -145,6 +148,7 @@
       <div>Stem SaaS<small>AI audio stem separation</small></div>
     </div>
     <div class="userbox hidden" id="userbox">
+      <select class="ws-select" id="wsSelect" title="Workspace" onchange="switchWorkspace(this.value)"></select>
       <span class="badge" id="tierBadge"></span>
       <span class="email" id="userEmail"></span>
       <button class="btn btn-ghost btn-sm" onclick="logout()"><i class="fa-solid fa-right-from-bracket"></i></button>
@@ -173,6 +177,10 @@
           <i class="fa-solid fa-arrow-right-to-bracket"></i> <span id="authBtnText">Log in</span>
         </button>
       </form>
+      <div class="oauth hidden" id="oauthBox">
+        <div class="or">or</div>
+        <div id="oauthButtons" style="display:grid;gap:10px"></div>
+      </div>
     </div>
     <p class="foot">Free tier: 3 songs / month · <a href="/docs" target="_blank">API docs</a> · <a href="https://github.com/adelsherif8/stem-saas" target="_blank">Source</a></p>
   </div>
@@ -214,6 +222,9 @@
 <script>
   const TOKEN_KEY = 'ssaas_token';
   const JOBS_KEY = 'ssaas_jobs';
+  const WS_KEY = 'ssaas_workspace';
+  let workspaces = [];
+  let currentWs = null; // {id, name, personal, tier, role}
   let token = localStorage.getItem(TOKEN_KEY) || '';
   let mode = 'login';
   const polling = {};
@@ -235,6 +246,7 @@
   async function api(path, opts = {}) {
     opts.headers = opts.headers || {};
     if (token) opts.headers['Authorization'] = 'Bearer ' + token;
+    if (currentWs && !currentWs.personal) opts.headers['X-Workspace-ID'] = String(currentWs.id);
     const res = await fetch(path, opts);
     if (res.status === 401) { logout(); throw new Error('Session expired — please log in again.'); }
     let data = null;
@@ -286,9 +298,51 @@
     return false;
   }
 
+  // Social login: the server redirects back with #access_token=... in the fragment.
+  function consumeOAuthRedirect() {
+    if (!location.hash.includes('access_token=')) return;
+    const params = new URLSearchParams(location.hash.slice(1));
+    token = params.get('access_token') || '';
+    if (token) localStorage.setItem(TOKEN_KEY, token);
+    history.replaceState(null, '', location.pathname + location.search);
+  }
+
+  async function loadOAuthProviders() {
+    try {
+      const res = await fetch('/auth/oauth/providers');
+      const list = (await res.json()).filter((p) => p.enabled);
+      if (!list.length) return;
+      $('oauthButtons').innerHTML = list.map((p) =>
+        '<a class="btn btn-ghost full" href="' + p.authorize_url + '"><i class="fa-brands fa-' + p.name + '"></i> Continue with ' + escapeHtml(p.label) + '</a>'
+      ).join('');
+      $('oauthBox').classList.remove('hidden');
+    } catch (_) {}
+  }
+
+  // ---------- workspaces ----------
+  async function loadWorkspaces() {
+    workspaces = await api('/workspaces');
+    const saved = Number(localStorage.getItem(WS_KEY));
+    currentWs = workspaces.find((w) => w.id === saved) || workspaces[0] || null;
+    $('wsSelect').innerHTML = workspaces.map((w) =>
+      '<option value="' + w.id + '"' + (currentWs && w.id === currentWs.id ? ' selected' : '') + '>' +
+      escapeHtml(w.personal ? 'Personal' : w.name) + ' (' + w.role + ')</option>'
+    ).join('');
+    $('wsSelect').classList.toggle('hidden', workspaces.length < 2);
+  }
+
+  async function switchWorkspace(id) {
+    currentWs = workspaces.find((w) => w.id === Number(id)) || currentWs;
+    localStorage.setItem(WS_KEY, String(currentWs.id));
+    Object.values(polling).forEach(clearTimeout);
+    await refreshQuota();
+    renderJobs();
+  }
+
   function logout() {
     token = '';
     localStorage.removeItem(TOKEN_KEY);
+    currentWs = null;
     Object.values(polling).forEach(clearTimeout);
     $('view-app').classList.add('hidden');
     $('view-auth').classList.remove('hidden');
@@ -303,6 +357,7 @@
     try {
       const me = await api('/auth/me');
       $('userEmail').textContent = me.email;
+      await loadWorkspaces();
     } catch (_) { return; }
     await refreshQuota();
     renderJobs();
@@ -324,7 +379,8 @@
       } else {
         $('quotaLabel').innerHTML = '<b>' + q.used_this_month + ' / ' + q.limit + '</b> songs used this month';
         $('quotaBar').style.width = Math.min(100, (q.used_this_month / q.limit) * 100) + '%';
-        $('upgradeBtn').classList.remove('hidden');
+        // Only the workspace owner may change its plan.
+        $('upgradeBtn').classList.toggle('hidden', !!currentWs && currentWs.role !== 'owner');
       }
     } catch (err) { toast(err.message, 'error'); }
   }
@@ -340,8 +396,10 @@
   }
 
   // ---------- jobs (tracked client-side) ----------
-  function loadJobs() { try { return JSON.parse(localStorage.getItem(JOBS_KEY)) || []; } catch (_) { return []; } }
-  function saveJobs(list) { localStorage.setItem(JOBS_KEY, JSON.stringify(list)); }
+  // Jobs are tracked per workspace (the personal one keeps the original key).
+  function jobsKey() { return !currentWs || currentWs.personal ? JOBS_KEY : JOBS_KEY + ':' + currentWs.id; }
+  function loadJobs() { try { return JSON.parse(localStorage.getItem(jobsKey())) || []; } catch (_) { return []; } }
+  function saveJobs(list) { localStorage.setItem(jobsKey(), JSON.stringify(list)); }
   function upsertJob(job) {
     const list = loadJobs();
     const i = list.findIndex((j) => j.id === job.id);
@@ -397,7 +455,9 @@
 
   async function downloadStem(jobId, name) {
     try {
-      const res = await fetch('/jobs/' + jobId + '/stems/' + name, { headers: { Authorization: 'Bearer ' + token } });
+      const headers = { Authorization: 'Bearer ' + token };
+      if (currentWs && !currentWs.personal) headers['X-Workspace-ID'] = String(currentWs.id);
+      const res = await fetch('/jobs/' + jobId + '/stems/' + name, { headers });
       if (!res.ok) throw new Error('Download failed');
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
@@ -452,6 +512,8 @@
 
   // ---------- boot ----------
   wireDropzone();
+  consumeOAuthRedirect();
+  loadOAuthProviders();
   if (token) { enterApp(); } else { setMode('login'); }
 </script>
 </body>
