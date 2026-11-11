@@ -124,23 +124,19 @@ def callback(
         raise HTTPException(status_code=400, detail="Missing code or state")
 
     row = db.get(OAuthState, state)
+    if row is None:
+        raise HTTPException(status_code=400, detail="Invalid or expired OAuth state")
+    row_provider, verifier, created_at = row.provider, row.code_verifier, row.created_at
     # Single use: consume the state whatever happens next.
-    if row is not None:
-        db.delete(row)
-        db.commit()
-    created_at = row.created_at if row else None
-    if created_at is not None and created_at.tzinfo is None:
+    db.delete(row)
+    db.commit()
+    if created_at.tzinfo is None:
         created_at = created_at.replace(tzinfo=timezone.utc)  # SQLite drops tz
-    if (
-        row is None
-        or row.provider != p.name
-        or created_at < utcnow() - STATE_TTL
-        or oauth_state != state
-    ):
+    if row_provider != p.name or created_at < utcnow() - STATE_TTL or oauth_state != state:
         raise HTTPException(status_code=400, detail="Invalid or expired OAuth state")
 
     try:
-        access_token = exchange_code(p, code, row.code_verifier)
+        access_token = exchange_code(p, code, verifier)
         identity = fetch_identity(p, access_token)
     except OAuthError as exc:
         logger.warning("oauth_failed", extra={"provider": p.name, "error": str(exc)})
